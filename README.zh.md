@@ -66,20 +66,19 @@ sudo yum install -y ffmpeg
 
 ### 第二步：安装 Python 依赖
 
-```bash
-# 进入 Hermes Agent 目录
-cd ~/.hermes/hermes-agent
+Hermes 使用 `uv` 管理虚拟环境，需将依赖安装到 Hermes 自带的 venv 中：
 
-# 安装依赖（使用 Hermes 自带的虚拟环境）
-venv/bin/pip install qq-botpy pysilk
+```bash
+uv pip install qq-botpy pysilk --python ~/.hermes/hermes-agent/venv/bin/python3
 ```
 
 ### 第三步：部署插件文件
 
-将 `qq.py` 复制到 Hermes Agent 的平台适配器目录：
+直接下载到 Hermes Agent 的平台适配器目录：
 
 ```bash
-cp qq.py ~/.hermes/hermes-agent/gateway/platforms/qq.py
+curl -fsSL https://raw.githubusercontent.com/shynloc/Hermes-Agent-QQ-Plugin/main/qq.py \
+  -o ~/.hermes/hermes-agent/gateway/platforms/qq.py
 ```
 
 ### 第四步：配置环境变量
@@ -89,12 +88,12 @@ cp qq.py ~/.hermes/hermes-agent/gateway/platforms/qq.py
 ```env
 QQ_APP_ID=你的AppID
 QQ_APP_SECRET=你的AppSecret
-QQ_ALLOW_ALL_USERS=true   # 或 false，仅允许白名单用户
+QQ_ALLOW_ALL_USERS=false  # 设为 true 则对所有 QQ 用户开放
 ```
 
 ### 第五步：启用平台
 
-在 `~/.hermes/config.yaml` 中添加（`streaming:` 字段之前）：
+在 `~/.hermes/config.yaml` 中添加：
 
 ```yaml
 platforms:
@@ -111,7 +110,7 @@ hermes gateway stop && hermes gateway start
 
 **Linux（systemd）**
 ```bash
-sudo systemctl restart hermes-gateway
+systemctl --user restart hermes-gateway
 # 或者前台运行调试：
 hermes gateway run
 ```
@@ -120,31 +119,30 @@ hermes gateway run
 
 ## Linux systemd 配置参考
 
-如果服务器尚未配置 systemd service，可参考以下模板：
+> **说明：** 推荐直接使用 `hermes gateway install` 自动注册服务。以下模板仅供需要自定义配置时参考。
 
 ```ini
-# /etc/systemd/system/hermes-gateway.service
+# ~/.config/systemd/user/hermes-gateway.service
 [Unit]
 Description=Hermes Agent Gateway
 After=network.target
 
 [Service]
 Type=simple
-User=your_user
-WorkingDirectory=/home/your_user/.hermes/hermes-agent
-ExecStart=/home/your_user/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run
+WorkingDirectory=%h/.hermes/hermes-agent
+ExecStart=%h/.local/bin/hermes gateway run
 Restart=on-failure
 RestartSec=10
-EnvironmentFile=/home/your_user/.hermes/.env
+EnvironmentFile=%h/.hermes/.env
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable hermes-gateway
-sudo systemctl start hermes-gateway
+systemctl --user daemon-reload
+systemctl --user enable hermes-gateway
+systemctl --user start hermes-gateway
 ```
 
 ---
