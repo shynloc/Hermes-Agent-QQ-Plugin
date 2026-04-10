@@ -60,15 +60,17 @@ sudo apt-get install -y ffmpeg
 
 ### Step 2: Install Python dependencies
 
+Hermes uses `uv` to manage its virtual environment. Install into the Hermes venv with:
+
 ```bash
-cd ~/.hermes/hermes-agent
-venv/bin/pip install qq-botpy pysilk
+uv pip install qq-botpy pysilk --python ~/.hermes/hermes-agent/venv/bin/python3
 ```
 
 ### Step 3: Deploy the plugin
 
 ```bash
-cp qq.py ~/.hermes/hermes-agent/gateway/platforms/qq.py
+curl -fsSL https://raw.githubusercontent.com/shynloc/Hermes-Agent-QQ-Plugin/main/qq.py \
+  -o ~/.hermes/hermes-agent/gateway/platforms/qq.py
 ```
 
 ### Step 4: Configure credentials
@@ -78,12 +80,12 @@ Add to `~/.hermes/.env`:
 ```env
 QQ_APP_ID=your_app_id
 QQ_APP_SECRET=your_app_secret
-QQ_ALLOW_ALL_USERS=true
+QQ_ALLOW_ALL_USERS=false  # set to true to allow all QQ users
 ```
 
 ### Step 5: Enable the platform
 
-Add to `~/.hermes/config.yaml` (before the `streaming:` key):
+Add to `~/.hermes/config.yaml`:
 
 ```yaml
 platforms:
@@ -100,7 +102,7 @@ hermes gateway stop && hermes gateway start
 
 **Linux**
 ```bash
-sudo systemctl restart hermes-gateway
+systemctl --user restart hermes-gateway
 # or run in foreground for debugging:
 hermes gateway run
 ```
@@ -109,29 +111,30 @@ hermes gateway run
 
 ## Linux systemd Setup
 
+> **Note:** `hermes gateway install` sets up the service automatically and is the recommended approach. Use the manual template below only if you need a custom setup.
+
 ```ini
-# /etc/systemd/system/hermes-gateway.service
+# ~/.config/systemd/user/hermes-gateway.service
 [Unit]
 Description=Hermes Agent Gateway
 After=network.target
 
 [Service]
 Type=simple
-User=your_user
-WorkingDirectory=/home/your_user/.hermes/hermes-agent
-ExecStart=/home/your_user/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run
+WorkingDirectory=%h/.hermes/hermes-agent
+ExecStart=%h/.local/bin/hermes gateway run
 Restart=on-failure
 RestartSec=10
-EnvironmentFile=/home/your_user/.hermes/.env
+EnvironmentFile=%h/.hermes/.env
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable hermes-gateway
-sudo systemctl start hermes-gateway
+systemctl --user daemon-reload
+systemctl --user enable hermes-gateway
+systemctl --user start hermes-gateway
 ```
 
 ---
