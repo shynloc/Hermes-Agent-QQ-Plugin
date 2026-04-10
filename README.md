@@ -40,11 +40,7 @@ English | [中文](./README.zh.md)
 
 1. Go to [QQ Open Platform](https://q.qq.com/) and create a bot
 2. Obtain your **AppID** and **AppSecret**
-3. Enable the following **Intents** in Developer Settings:
-   - `Public Messages` (group @ + C2C)
-   - `Guild Messages` (guild @ — optional)
-   - `Guild Direct Messages` (guild DM — optional)
-4. Apply for message sending permissions as needed (text / image / voice / file)
+3. Apply for message sending permissions as needed (text / image / voice / file)
 
 ---
 
