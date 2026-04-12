@@ -184,6 +184,8 @@ A: 重启 Gateway 重置序列号即可。
 **Q: 海外服务器连接 QQ API 延迟高**  
 A: `api.sgroup.qq.com` 和 `bots.qq.com` 均为境内服务器，海外访问有延迟但可达。如需加速可配置代理，并将这两个域名加入代理白名单。
 
+更多详细问题排查（包括 `KeyError: 'qq'`、`ModuleNotFoundError: No module named 'botpy'`、`git pull` 后插件失效等），请参阅 **[TROUBLESHOOTING.zh.md](./TROUBLESHOOTING.zh.md)**。
+
 ---
 
 ## 相关项目

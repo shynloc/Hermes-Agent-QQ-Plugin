@@ -173,6 +173,8 @@ Daily upload quota exceeded. Retry the next day.
 **High latency from overseas servers**  
 `api.sgroup.qq.com` and `bots.qq.com` are hosted in mainland China. Overseas access works but may be slow. Configure a proxy if needed.
 
+For more detailed troubleshooting including `KeyError: 'qq'`, `ModuleNotFoundError: No module named 'botpy'`, and post-`git pull` breakage, see **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)**.
+
 ---
 
 ## Related Projects
