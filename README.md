@@ -151,7 +151,9 @@ systemctl --user start hermes-gateway
 |----------|:--------:|-------------|
 | `QQ_APP_ID` | ✅ | QQ Bot AppID |
 | `QQ_APP_SECRET` | ✅ | QQ Bot AppSecret |
-| `QQ_ALLOW_ALL_USERS` | — | Set `true` to allow all users (default: `false`) |
+| `QQ_ALLOW_ALL_USERS` | — | Set `true` to allow all QQ users (default: `false`) |
+| `QQ_ALLOWED_USERS` | — | Comma-separated list of allowed QQ user IDs when `ALLOW_ALL_USERS=false` |
+| `QQ_HOME_CHANNEL` | — | QQ chat ID to receive cron job results and cross-platform messages |
 
 ### config.yaml
 
@@ -159,6 +161,10 @@ systemctl --user start hermes-gateway
 platforms:
   qq:
     enabled: true
+
+platform_toolsets:
+  qq:
+  - hermes-telegram
 ```
 
 ---

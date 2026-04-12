@@ -158,6 +158,8 @@ systemctl --user start hermes-gateway
 | `QQ_APP_ID` | ✅ | QQ Bot AppID |
 | `QQ_APP_SECRET` | ✅ | QQ Bot AppSecret |
 | `QQ_ALLOW_ALL_USERS` | — | `true` 开放给所有用户，默认 `false` |
+| `QQ_ALLOWED_USERS` | — | 逗号分隔的 QQ 用户 ID 白名单，`ALLOW_ALL_USERS=false` 时生效 |
+| `QQ_HOME_CHANNEL` | — | 接收定时任务结果和跨平台消息的 QQ 聊天 ID |
 
 ### config.yaml
 
@@ -165,6 +167,10 @@ systemctl --user start hermes-gateway
 platforms:
   qq:
     enabled: true
+
+platform_toolsets:
+  qq:
+  - hermes-telegram
 ```
 
 ---
