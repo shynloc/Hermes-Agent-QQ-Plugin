@@ -64,24 +64,20 @@ sudo apt-get install -y ffmpeg
 sudo yum install -y ffmpeg
 ```
 
-### 第二步：安装 Python 依赖
-
-Hermes 使用 `uv` 管理虚拟环境，需将依赖安装到 Hermes 自带的 venv 中：
+### 第二步：克隆仓库并运行安装脚本
 
 ```bash
-uv pip install qq-botpy pysilk --python ~/.hermes/hermes-agent/venv/bin/python3
+git clone https://github.com/shynloc/Hermes-Agent-QQ-Plugin.git
+cd Hermes-Agent-QQ-Plugin
+bash install.sh
 ```
 
-### 第三步：部署插件文件
+安装脚本会自动完成：
+- 将 `qq.py` 复制到 Hermes 平台适配器目录
+- 将 `qq-botpy` 和 `pysilk` 安装到 Hermes venv 中
+- 对 Hermes 核心文件打入所有必要补丁（幂等操作，`git pull` 后重跑安全）
 
-直接下载到 Hermes Agent 的平台适配器目录：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/shynloc/Hermes-Agent-QQ-Plugin/main/qq.py \
-  -o ~/.hermes/hermes-agent/gateway/platforms/qq.py
-```
-
-### 第四步：配置环境变量
+### 第三步：配置环境变量
 
 在 `~/.hermes/.env` 中添加：
 
@@ -91,7 +87,7 @@ QQ_APP_SECRET=你的AppSecret
 QQ_ALLOW_ALL_USERS=false  # 设为 true 则对所有 QQ 用户开放
 ```
 
-### 第五步：启用平台
+### 第四步：启用平台
 
 在 `~/.hermes/config.yaml` 中添加：
 
@@ -99,21 +95,27 @@ QQ_ALLOW_ALL_USERS=false  # 设为 true 则对所有 QQ 用户开放
 platforms:
   qq:
     enabled: true
+
+platform_toolsets:
+  qq:
+  - hermes-telegram
 ```
 
-### 第六步：重启 Gateway
+### 第五步：重启 Gateway
 
-**macOS（launchd）**
 ```bash
-hermes gateway stop && hermes gateway start
+hermes gateway restart
 ```
 
-**Linux（systemd）**
+### Hermes 更新后重新应用补丁
+
+安装脚本所打的补丁位于 Hermes 核心文件中，更新后会被覆盖。只需重新运行：
+
 ```bash
-systemctl --user restart hermes-gateway
-# 或者前台运行调试：
-hermes gateway run
+bash install.sh
 ```
+
+所有补丁均为幂等操作，已应用的修改会自动跳过。
 
 ---
 

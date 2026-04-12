@@ -58,22 +58,20 @@ brew install ffmpeg
 sudo apt-get install -y ffmpeg
 ```
 
-### Step 2: Install Python dependencies
-
-Hermes uses `uv` to manage its virtual environment. Install into the Hermes venv with:
+### Step 2: Clone this repo and run the installer
 
 ```bash
-uv pip install qq-botpy pysilk --python ~/.hermes/hermes-agent/venv/bin/python3
+git clone https://github.com/shynloc/Hermes-Agent-QQ-Plugin.git
+cd Hermes-Agent-QQ-Plugin
+bash install.sh
 ```
 
-### Step 3: Deploy the plugin
+The installer:
+- Copies `qq.py` to the Hermes platforms directory
+- Installs `qq-botpy` and `pysilk` into the Hermes venv
+- Applies all required patches to Hermes core files (idempotent — safe to re-run after `git pull`)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/shynloc/Hermes-Agent-QQ-Plugin/main/qq.py \
-  -o ~/.hermes/hermes-agent/gateway/platforms/qq.py
-```
-
-### Step 4: Configure credentials
+### Step 3: Configure credentials
 
 Add to `~/.hermes/.env`:
 
@@ -83,7 +81,7 @@ QQ_APP_SECRET=your_app_secret
 QQ_ALLOW_ALL_USERS=false  # set to true to allow all QQ users
 ```
 
-### Step 5: Enable the platform
+### Step 4: Enable the platform
 
 Add to `~/.hermes/config.yaml`:
 
@@ -91,21 +89,27 @@ Add to `~/.hermes/config.yaml`:
 platforms:
   qq:
     enabled: true
+
+platform_toolsets:
+  qq:
+  - hermes-telegram
 ```
 
-### Step 6: Restart the Gateway
+### Step 5: Restart the Gateway
 
-**macOS**
 ```bash
-hermes gateway stop && hermes gateway start
+hermes gateway restart
 ```
 
-**Linux**
+### Re-running after `hermes pull` / Hermes updates
+
+The installer patches Hermes core files which are overwritten by updates. Simply re-run:
+
 ```bash
-systemctl --user restart hermes-gateway
-# or run in foreground for debugging:
-hermes gateway run
+bash install.sh
 ```
+
+All patches are idempotent — already-applied changes are skipped automatically.
 
 ---
 
