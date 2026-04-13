@@ -224,6 +224,26 @@ hermes gateway run
 
 ---
 
+## 发送文件后机器人说"没有收到文件"
+
+**现象：** 向 QQ 机器人发送 PDF、图片或其他文件后，机器人回复没有收到任何文件，或表现得像收到了空消息。
+
+**根本原因：** `qq.py` 的 `_handle_inbound_message` 原本只读取 `message.content`（文字内容），完全忽略了 `message.attachments`。botpy 已经将附件信息（下载 URL、文件名、MIME 类型）放在 `message.attachments` 里，但没有代码去处理它。
+
+此外，即使附件下载成功，`run.py` 注入的是英文 context note，而 doubao 等中文优先模型在 session 历史中有多轮"没收到文件"记录时，容易将英文注释当作无关格式忽略掉。
+
+**修复：** v1.2.0 起，`qq.py` 新增 `_handle_message_with_attachments` 方法：
+
+- 检测 `message.attachments`，按类型路由缓存（图片 → `cache_image_from_bytes`，音频 → `cache_audio_from_bytes`，文档 → `cache_document_from_bytes`）
+- 处理协议相对 URL（`//gchat.qpic.cn/...` → `https://...`）
+- 文档类附件在 `event.text` 为空时，自动注入中文 context note，明确告知模型文件路径及下一步操作
+
+**如果你使用的是旧版 `qq.py`，** 重新运行 `bash install.sh` 即可更新。
+
+**如果 session 历史已被"没收到文件"污染，** 在 QQ 里发送 `/reset` 清空历史，再重新发文件。
+
+---
+
 ## 完整补丁清单（每次 `git pull` 后需重新应用）
 
 | 文件 | 修改内容 |

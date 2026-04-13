@@ -223,6 +223,26 @@ hermes gateway run
 
 ---
 
+## Bot says "I haven't received any file" after you send one
+
+**Symptom:** After sending a PDF, image, or other file to the QQ bot, it replies that it received no file — or behaves as if it got an empty message.
+
+**Root cause:** `qq.py`'s `_handle_inbound_message` only read `message.content` (plain text) and silently discarded `message.attachments`. The botpy library already populates attachment metadata (`url`, `filename`, `content_type`) in `message.attachments` — nothing was reading it.
+
+Additionally, even after the file is downloaded, `run.py` injects an English-only context note. Chinese-first models (e.g. doubao-seed) may ignore the English annotation — especially when the session history already contains several "I haven't received the file" turns.
+
+**Fix:** Since v1.2.0, `qq.py` includes `_handle_message_with_attachments`, which:
+
+- Detects `message.attachments` and routes by type: image → `cache_image_from_bytes`, audio → `cache_audio_from_bytes`, document → `cache_document_from_bytes`
+- Normalises protocol-relative URLs (`//gchat.qpic.cn/...` → `https://...`)
+- For document attachments with no caption, injects a Chinese-language context note directly into `event.text` so the model knows the file path and what to do next
+
+**If you are on an older `qq.py`:** re-run `bash install.sh` to update.
+
+**If the session history has been polluted** with "I haven't received the file" turns: send `/reset` in QQ to clear the history, then resend the file.
+
+---
+
 ## Complete patch checklist (apply after every `git pull`)
 
 | File | Change |

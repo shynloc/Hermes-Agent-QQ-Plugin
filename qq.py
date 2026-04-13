@@ -484,9 +484,86 @@ class QQAdapter(BasePlatformAdapter):
                 raw_message=message
             )
 
-            asyncio.create_task(self.handle_message(event))
+            attachments = getattr(message, "attachments", []) or []
+            if attachments:
+                asyncio.create_task(self._handle_message_with_attachments(event, attachments))
+            else:
+                asyncio.create_task(self.handle_message(event))
         except Exception as e:
             logger.error(f"[QQ] Error handling message: {str(e)}")
+
+    async def _handle_message_with_attachments(self, event: MessageEvent, attachments) -> None:
+        from .base import cache_image_from_bytes, cache_document_from_bytes, cache_audio_from_bytes
+        import mimetypes as _mimetypes
+
+        media_urls = []
+        media_types = []
+
+        async with aiohttp.ClientSession() as session:
+            for att in attachments:
+                url = getattr(att, "url", None)
+                filename = getattr(att, "filename", None) or "attachment"
+                content_type = getattr(att, "content_type", None) or ""
+                if not url:
+                    continue
+                if url.startswith("//"):
+                    url = "https:" + url
+                try:
+                    async with session.get(url) as resp:
+                        if resp.status != 200:
+                            logger.warning("[QQ] Attachment download failed: %s status=%s", url, resp.status)
+                            continue
+                        data = await resp.read()
+                except Exception as e:
+                    logger.warning("[QQ] Attachment download error: %s %s", url, e)
+                    continue
+
+                if not content_type or content_type == "application/octet-stream":
+                    guessed, _ = _mimetypes.guess_type(filename)
+                    if guessed:
+                        content_type = guessed
+
+                ext = os.path.splitext(filename)[1].lower() or ".bin"
+                if content_type.startswith("image/"):
+                    cached = cache_image_from_bytes(data, ext=ext)
+                    logger.info("[QQ] Cached attachment image at %s", cached)
+                elif content_type.startswith("audio/"):
+                    cached = cache_audio_from_bytes(data, ext=ext)
+                    logger.info("[QQ] Cached attachment audio at %s", cached)
+                else:
+                    cached = cache_document_from_bytes(data, filename=filename)
+                    logger.info("[QQ] Cached attachment document at %s", cached)
+                    if not content_type:
+                        content_type = "application/octet-stream"
+                    # Inject Chinese context note so Chinese-first LLMs (e.g. doubao)
+                    # reliably understand the file is ready. English-only notes from
+                    # run.py can be ignored by Chinese-primary models, especially when
+                    # the session history contains prior "I haven't received the file" turns.
+                    if not event.text:
+                        event.text = (
+                            f"【文件已接收】主人发送了文件《{filename}》，"
+                            f"已缓存到本地路径：{cached}。"
+                            f"请立即使用 read_file 工具读取该文件，根据对话历史中的指示处理，"
+                            f"不要再要求主人重新上传。"
+                        )
+
+                media_urls.append(cached)
+                media_types.append(content_type)
+
+        if media_urls:
+            event.media_urls = media_urls
+            event.media_types = media_types
+            primary = media_types[0]
+            if primary.startswith("image/"):
+                event.message_type = MessageType.PHOTO
+            elif primary.startswith("audio/"):
+                event.message_type = MessageType.VOICE
+            elif primary.startswith("video/"):
+                event.message_type = MessageType.VIDEO
+            else:
+                event.message_type = MessageType.DOCUMENT
+
+        await self.handle_message(event)
 
 
 class QQClient(botpy.Client):
