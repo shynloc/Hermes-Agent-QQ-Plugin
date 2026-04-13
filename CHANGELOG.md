@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.1 (2026-04-14)
+
+### 修复
+
+- **`install.sh` Step 5 兼容新版 Hermes**：Hermes 新版本将 `PLATFORMS` 注册表从 `hermes_cli/tools_config.py` 迁移到独立的 `hermes_cli/platforms.py`，导致 Step 5 锚点失效并显示 `[WARN] anchor not found`。现在自动检测文件位置，优先打 `platforms.py`，旧版本回退到 `tools_config.py`。
+
+---
+
 ## v1.2.0 (2026-04-13)
 
 ### 新增

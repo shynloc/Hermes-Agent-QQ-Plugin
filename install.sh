@@ -29,6 +29,7 @@ PYTHON="$HERMES_AGENT/venv/bin/python3"
 CONFIG_PY="$HERMES_AGENT/gateway/config.py"
 RUN_PY="$HERMES_AGENT/gateway/run.py"
 TOOLS_CONFIG="$HERMES_AGENT/hermes_cli/tools_config.py"
+PLATFORMS_PY="$HERMES_AGENT/hermes_cli/platforms.py"
 TOOLSETS="$HERMES_AGENT/toolsets.py"
 PLATFORMS_DIR="$HERMES_AGENT/gateway/platforms"
 
@@ -165,16 +166,27 @@ patch_file "$RUN_PY" "platform_allow_all_map: QQ entry" \
 
 ok "gateway/run.py patched"
 
-# ── Step 5: Patch hermes_cli/tools_config.py ─────────────────────────────────
+# ── Step 5: Patch PLATFORMS registry (location changed across Hermes versions) ─
 echo ""
-echo "Step 5/6  Patch hermes_cli/tools_config.py"
+echo "Step 5/6  Patch PLATFORMS registry"
 
-patch_file "$TOOLS_CONFIG" "PLATFORMS dict: qq entry" \
-    '    "weixin": {"label": "💬 Weixin", "default_toolset": "hermes-weixin"},' \
-    '    "weixin": {"label": "💬 Weixin", "default_toolset": "hermes-weixin"},
-    "qq": {"label": "🐧 QQ", "default_toolset": "hermes-qq"},'
-
-ok "hermes_cli/tools_config.py patched"
+# Hermes moved PLATFORMS from tools_config.py (old) to hermes_cli/platforms.py (new).
+# Try the new location first; fall back to the old one.
+if [ -f "$PLATFORMS_PY" ]; then
+    patch_file "$PLATFORMS_PY" "platforms.py: qq entry" \
+        '    ("weixin",         PlatformInfo(label="💬 Weixin",          default_toolset="hermes-weixin")),' \
+        '    ("weixin",         PlatformInfo(label="💬 Weixin",          default_toolset="hermes-weixin")),
+    ("qq",             PlatformInfo(label="🐧 QQ",               default_toolset="hermes-qq")),' \
+        '"hermes-qq"'
+    ok "hermes_cli/platforms.py patched"
+else
+    patch_file "$TOOLS_CONFIG" "PLATFORMS dict: qq entry" \
+        '    "weixin": {"label": "💬 Weixin", "default_toolset": "hermes-weixin"},' \
+        '    "weixin": {"label": "💬 Weixin", "default_toolset": "hermes-weixin"},
+    "qq": {"label": "🐧 QQ", "default_toolset": "hermes-qq"},' \
+        '"hermes-qq"'
+    ok "hermes_cli/tools_config.py patched (legacy location)"
+fi
 
 # ── Step 6: Patch toolsets.py ─────────────────────────────────────────────────
 echo ""
