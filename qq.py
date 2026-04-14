@@ -2,21 +2,41 @@ import asyncio
 import hashlib
 import logging
 import os
+import re
 import subprocess
 import tempfile
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import aiohttp
 import botpy
 from botpy.message import Message, DirectMessage, GroupMessage, C2CMessage
+from botpy.types.message import MarkdownPayload
 from .base import BasePlatformAdapter, MessageEvent, MessageType, SendResult, Platform
 
 logger = logging.getLogger(__name__)
 MAX_MESSAGE_LENGTH = 5000
 QQ_API_BASE = "https://api.sgroup.qq.com"
 
+# Markdown patterns that QQ supports
+MARKDOWN_PATTERNS = [
+    r'^#+\s',           # Headers: # ## ### etc
+    r'\*\*[^*]+\*\*',   # Bold: **text**
+    r'\*[^*]+\*',       # Italic: *text*
+    r'~~[^~]+~~',       # Strikethrough: ~~text~~
+    r'`[^`]+`',         # Inline code: `code`
+    r'^```\w*$',        # Code block start
+    r'^```$',           # Code block end
+    r'^>\s',            # Blockquote
+    r'^[-*+]\s',        # Unordered list
+    r'^\d+\.\s',        # Ordered list
+    r'\[.+\]\(.+\)',    # Link: [text](url)
+    r'^---+$',          # Horizontal rule
+]
+
 
 class QQAdapter(BasePlatformAdapter):
+    SUPPORTS_MESSAGE_EDITING = False
+
     def __init__(self, config):
         super().__init__(config, Platform.QQ)
         extra = config.extra or {}
@@ -30,6 +50,13 @@ class QQAdapter(BasePlatformAdapter):
     def _next_seq(self) -> int:
         self._msg_seq += 1
         return self._msg_seq
+
+    def _has_markdown(self, text: str) -> bool:
+        """Check if text contains markdown syntax that QQ supports."""
+        for pattern in MARKDOWN_PATTERNS:
+            if re.search(pattern, text, re.MULTILINE):
+                return True
+        return False
 
     async def connect(self) -> bool:
         try:
@@ -79,25 +106,51 @@ class QQAdapter(BasePlatformAdapter):
 
     async def _send_single(self, chat_id: str, text: str, **kwargs) -> SendResult:
         try:
+            use_markdown = self._has_markdown(text)
+            
             if chat_id.startswith("c2c:"):
                 user_openid = chat_id.split(":", 1)[1]
-                msg = await self.client.api.post_c2c_message(
-                    openid=user_openid,
-                    msg_type=0,
-                    content=text,
-                    msg_seq=self._next_seq()
-                )
+                if use_markdown:
+                    markdown = MarkdownPayload(content=text)
+                    msg = await self.client.api.post_c2c_message(
+                        openid=user_openid,
+                        msg_type=2,
+                        markdown=markdown,
+                        msg_seq=self._next_seq()
+                    )
+                else:
+                    msg = await self.client.api.post_c2c_message(
+                        openid=user_openid,
+                        msg_type=0,
+                        content=text,
+                        msg_seq=self._next_seq()
+                    )
             elif chat_id.startswith("group:"):
                 group_openid = chat_id.split(":", 1)[1]
-                msg = await self.client.api.post_group_message(
-                    group_openid=group_openid,
-                    msg_type=0,
-                    content=text,
-                    msg_seq=self._next_seq()
-                )
+                if use_markdown:
+                    markdown = MarkdownPayload(content=text)
+                    msg = await self.client.api.post_group_message(
+                        group_openid=group_openid,
+                        msg_type=2,
+                        markdown=markdown,
+                        msg_seq=self._next_seq()
+                    )
+                else:
+                    msg = await self.client.api.post_group_message(
+                        group_openid=group_openid,
+                        msg_type=0,
+                        content=text,
+                        msg_seq=self._next_seq()
+                    )
             else:
-                # 频道消息
-                msg = await self.client.api.post_message(channel_id=chat_id, content=text)
+                if use_markdown:
+                    markdown = MarkdownPayload(content=text)
+                    msg = await self.client.api.post_message(
+                        channel_id=chat_id, 
+                        markdown=markdown
+                    )
+                else:
+                    msg = await self.client.api.post_message(channel_id=chat_id, content=text)
             return SendResult(
                 success=True,
                 message_id=str(msg.get("id", "") if isinstance(msg, dict) else getattr(msg, "id", "")),
